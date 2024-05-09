@@ -1,11 +1,18 @@
-FROM python:3.11.4-alpine
-ENV DIRPATH=/app/giropops-senhas
-WORKDIR $DIRPATH
-COPY ./* $DIRPATH
-COPY ./templates templates/
-COPY ./static static/
-#RUN apt-get update && apt-get install pip -y && pip install --no-cache-dir -r requirements.txt && \
-    #apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir -r requirements.txt 
+FROM cgr.dev/chainguard/python:latest-dev as builder
+WORKDIR /app
+COPY ./requirements.txt /app
+
+RUN pip install --no-cache-dir -r requirements.txt --user
+
+FROM cgr.dev/chainguard/python:latest
+
+WORKDIR /app
+COPY --from=builder /home/nonroot/.local/lib/python3.12/site-packages /home/nonroot/.local/lib/python3.12/site-packages
+#COPY --from=builder /home/nonroot/.local/bin/flask /home/nonroot/.local/bin/flask
+
+COPY ./* /app
+COPY ./templates /app/templates/
+COPY ./static /app/static/
+
 ENV REDIS_HOST=172.17.0.2
-ENTRYPOINT ["flask", "run", "--host=0.0.0.0"]
+ENTRYPOINT ["python", "-m", "flask", "run", "--host=0.0.0.0"]
